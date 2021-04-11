@@ -1,5 +1,6 @@
 const faker = require('faker')
 const testServer = require('../utils/testServer')
+const { jsonUsuario } = require('../utils/user')
 
 const rotaUsuarios = '/usuarios'
 
@@ -16,14 +17,7 @@ describe('Consultar usuário através da rota GET', () => {
   })
 
   it('Listar usuário por id com sucesso', async () => {
-    const usuario = {
-      nome: faker.name.firstName() + ' ' + faker.name.lastName(),
-      email: faker.internet.email(),
-      password: faker.internet.password(),
-      administrador: `${faker.random.boolean()}`
-    }
-
-    const { body } = await testServer.post(rotaUsuarios).send(usuario).expect(201)
+    const { body } = await testServer.post(rotaUsuarios).send(jsonUsuario()).expect(201)
     const { body: bodyGet } = await testServer
       .get(rotaUsuarios)
       .query({ _id: `${body._id}` })
