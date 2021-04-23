@@ -1,4 +1,3 @@
-const faker = require('faker')
 const testServer = require('../utils/testServer')
 const { jsonUsuario } = require('../utils/user')
 

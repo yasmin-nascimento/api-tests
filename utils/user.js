@@ -14,7 +14,6 @@ const criarUsuario = async usuario => {
   return await testServer.post('/usuarios').send(usuario)
 }
 
-//cadastrar usuário administrador
 const jsonAdmin = () => {
   return {
     nome: faker.name.firstName() + ' ' + faker.name.lastName(),
@@ -39,30 +38,17 @@ const getAdminUserById = async id => {
   return body
 }
 
-//cadastrar um produto
-const jsonProduto = () => {
-  return {
-    nome: faker.commerce.productName(),
-    preco: faker.commerce.price(),
-    descricao: faker.commerce.productDescription(),
-    quantidade: faker.random.number()
-  }
+const login = async (email, password) => {
+  const { body } = await testServer.post('/login').send({ email, password }).expect(200)
+  return body.authorization
 }
-
-// const { body } = async cadastrarProduto => {
-//   return await testServer
-//     .post('/produtos')
-//     .set('Content-type', 'application/json')
-//     .set('Authorization', `${body.authorization}`)
-//     .send(cadastrarProduto)
-// }
 
 module.exports = {
   criarUsuario,
   jsonUsuario,
   adminUsuario,
   jsonAdmin,
-  jsonProduto,
   postUser,
-  getAdminUserById
+  getAdminUserById,
+  login
 }
