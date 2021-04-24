@@ -1,161 +1,101 @@
-const faker = require('faker')
 const testServer = require('../utils/testServer')
-const { postUser } = require('../utils/user')
-const { getAdminUserById } = require('../utils/user')
+const { postUser, getAdminUserById, login } = require('../utils/user')
+const { rotaCarrinhos } = require('../utils/rotas')
+const { criarProduto } = require('../utils/produto')
+const { criarCarrinho } = require('../utils/carrinho')
 
-const rotaLogin = '/login'
-const rotaProdutos = '/produtos'
-const rotaCarrinhos = '/carrinhos'
+let userId
 
 describe('Cancelar compra na rota DELETE', () => {
-  it('Cancelar Compra', async () => {
-    const { _id } = await postUser()
-
-    const { email, password } = await getAdminUserById(_id)
-
-    const { body } = await testServer.post(rotaLogin).send({ email, password })
-
-    const { body: bodyPost } = await testServer
-      .post(rotaProdutos)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-      .send({
-        nome: faker.commerce.productName(),
-        preco: faker.commerce.price(),
-        descricao: faker.commerce.productDescription(),
-        quantidade: faker.random.number()
-      })
-
-    const _idProduto = bodyPost._id
-
-    const carrinho = await testServer
-      .post(rotaCarrinhos)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-      .send({
-        produtos: [
-          {
-            idProduto: `${_idProduto}`,
-            quantidade: 1
-          }
-        ]
-      })
-
-    expect(carrinho.status).toBe(201)
-
-    const cancelarCompra = await testServer
-      .delete(`${rotaCarrinhos}/cancelar-compra`)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-
-    expect(cancelarCompra.status).toBe(200)
-    expect(cancelarCompra.body).toHaveProperty(
-      'message',
-      'Registro excluído com sucesso. Estoque dos produtos reabastecido'
-    )
+  beforeEach(async () => {
+    const responseUser = await postUser()
+    userId = responseUser._id
   })
 
-  it('Carrinho não encontrado', async () => {
-    const { _id } = await postUser()
+  describe('quando usuário possui carrinho', () => {
+    it('Cancelar Compra', async () => {
+      const { email, password } = await getAdminUserById(userId)
+      const authorization = await login(email, password)
 
-    const { email, password } = await getAdminUserById(_id)
+      const produto = await criarProduto(authorization)
+      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
 
-    const { body } = await testServer.post(rotaLogin).send({ email, password })
+      const { _id: _idProduto } = produto
 
-    const { body: bodyPost } = await testServer
-      .post(rotaProdutos)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-      .send({
-        nome: faker.commerce.productName(),
-        preco: faker.commerce.price(),
-        descricao: faker.commerce.productDescription(),
-        quantidade: faker.random.number()
-      })
+      const carrinho = await criarCarrinho(_idProduto, authorization)
+      expect(carrinho).toHaveProperty('message', 'Cadastro realizado com sucesso')
 
-    expect(bodyPost).toHaveProperty('message', 'Cadastro realizado com sucesso')
+      const cancelarCarrinho = await testServer
+        .delete(`${rotaCarrinhos}/cancelar-compra`)
+        .set('Content-type', 'application/json')
+        .set('Authorization', authorization)
 
-    const cancelarCompra = await testServer
-      .delete(`${rotaCarrinhos}/cancelar-compra`)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-
-    expect(cancelarCompra.status).toBe(200)
-    expect(cancelarCompra.body).toHaveProperty('message', 'Não foi encontrado carrinho para esse usuário')
-  })
-})
-
-describe('Concluir Compra na rota DELETE', () => {
-  it('Concluir Compra', async () => {
-    const { _id } = await postUser()
-
-    const { email, password } = await getAdminUserById(_id)
-
-    const { body } = await testServer.post(rotaLogin).send({ email, password })
-
-    const { body: bodyPost } = await testServer
-      .post(rotaProdutos)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-      .send({
-        nome: faker.commerce.productName(),
-        preco: faker.commerce.price(),
-        descricao: faker.commerce.productDescription(),
-        quantidade: faker.random.number()
-      })
-
-    const _idProduto = bodyPost._id
-
-    const carrinho = await testServer
-      .post(rotaCarrinhos)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-      .send({
-        produtos: [
-          {
-            idProduto: `${_idProduto}`,
-            quantidade: 1
-          }
-        ]
-      })
-
-    expect(carrinho.status).toBe(201)
-
-    const concluirCompra = await testServer
-      .delete(`${rotaCarrinhos}/concluir-compra`)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-
-    expect(concluirCompra.status).toBe(200)
-    expect(concluirCompra.body).toHaveProperty('message', 'Registro excluído com sucesso')
+      expect(200)
+      expect(cancelarCarrinho.body).toHaveProperty(
+        'message',
+        'Registro excluído com sucesso. Estoque dos produtos reabastecido'
+      )
+    })
   })
 
-  it('Carrinho não encontrado', async () => {
-    const { _id } = await postUser()
+  describe('quando usuário não possui carrinho', () => {
+    it('Carrinho não encontrado', async () => {
+      const { email, password } = await getAdminUserById(userId)
+      const authorization = await login(email, password)
 
-    const { email, password } = await getAdminUserById(_id)
+      const produto = await criarProduto(authorization)
+      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
 
-    const { body } = await testServer.post(rotaLogin).send({ email, password })
+      const { _id: _idProduto } = produto
 
-    const { body: bodyPost } = await testServer
-      .post(rotaProdutos)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
-      .send({
-        nome: faker.commerce.productName(),
-        preco: faker.commerce.price(),
-        descricao: faker.commerce.productDescription(),
-        quantidade: faker.random.number()
-      })
+      const cancelarCarrinho = await testServer
+        .delete(`${rotaCarrinhos}/cancelar-compra`)
+        .set('Content-type', 'application/json')
+        .set('Authorization', authorization)
 
-    expect(bodyPost).toHaveProperty('message', 'Cadastro realizado com sucesso')
+      expect(200)
+      expect(cancelarCarrinho.body).toHaveProperty('message', 'Não foi encontrado carrinho para esse usuário')
+    })
+  })
 
-    const concluirCompra = await testServer
-      .delete(`${rotaCarrinhos}/concluir-compra`)
-      .set('Content-type', 'application/json')
-      .set('Authorization', `${body.authorization}`)
+  describe('Concluir Compra na rota Delete', () => {
+    it('Concluir Compra para cliente com carrinho', async () => {
+      const { email, password } = await getAdminUserById(userId)
+      const authorization = await login(email, password)
 
-    expect(concluirCompra.status).toBe(200)
-    expect(concluirCompra.body).toHaveProperty('message', 'Não foi encontrado carrinho para esse usuário')
+      const produto = await criarProduto(authorization)
+      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
+
+      const { _id: _idProduto } = produto
+
+      const carrinho = await criarCarrinho(_idProduto, authorization)
+      expect(carrinho).toHaveProperty('message', 'Cadastro realizado com sucesso')
+
+      const concluirCompra = await testServer
+        .delete(`${rotaCarrinhos}/concluir-compra`)
+        .set('Content-type', 'application/json')
+        .set('Authorization', `${authorization}`)
+
+      expect(concluirCompra.status).toBe(200)
+      expect(concluirCompra.body).toHaveProperty('message', 'Registro excluído com sucesso')
+    })
+
+    it('Concluir Compra para cliente sem carrinho', async () => {
+      const { email, password } = await getAdminUserById(userId)
+      const authorization = await login(email, password)
+
+      const produto = await criarProduto(authorization)
+      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
+
+      const { _id: _idProduto } = produto
+
+      const concluirCompra = await testServer
+        .delete(`${rotaCarrinhos}/concluir-compra`)
+        .set('Content-type', 'application/json')
+        .set('Authorization', `${authorization}`)
+
+      expect(concluirCompra.status).toBe(200)
+      expect(concluirCompra.body).toHaveProperty('message', 'Não foi encontrado carrinho para esse usuário')
+    })
   })
 })
