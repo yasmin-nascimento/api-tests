@@ -5,24 +5,25 @@ const { criarProduto } = require('../utils/produto')
 const { criarCarrinho } = require('../utils/carrinho')
 
 let userId
+let authorization
+let idProduto
 
 describe('Cancelar compra na rota DELETE', () => {
   beforeEach(async () => {
     const responseUser = await postUser()
     userId = responseUser._id
+
+    const { email, password } = await getAdminUserById(userId)
+    authorization = await login(email, password)
+
+    const produto = await criarProduto(authorization)
+    expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
+    idProduto = produto._id
   })
 
   describe('quando usuário possui carrinho', () => {
     it('Cancelar Compra', async () => {
-      const { email, password } = await getAdminUserById(userId)
-      const authorization = await login(email, password)
-
-      const produto = await criarProduto(authorization)
-      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
-
-      const { _id: _idProduto } = produto
-
-      const carrinho = await criarCarrinho(_idProduto, authorization)
+      const carrinho = await criarCarrinho(idProduto, authorization)
       expect(carrinho).toHaveProperty('message', 'Cadastro realizado com sucesso')
 
       const cancelarCarrinho = await testServer
@@ -40,14 +41,6 @@ describe('Cancelar compra na rota DELETE', () => {
 
   describe('quando usuário não possui carrinho', () => {
     it('Carrinho não encontrado', async () => {
-      const { email, password } = await getAdminUserById(userId)
-      const authorization = await login(email, password)
-
-      const produto = await criarProduto(authorization)
-      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
-
-      const { _id: _idProduto } = produto
-
       const cancelarCarrinho = await testServer
         .delete(`${rotaCarrinhos}/cancelar-compra`)
         .set('Content-type', 'application/json')
@@ -60,15 +53,7 @@ describe('Cancelar compra na rota DELETE', () => {
 
   describe('Concluir Compra na rota Delete', () => {
     it('Concluir Compra para cliente com carrinho', async () => {
-      const { email, password } = await getAdminUserById(userId)
-      const authorization = await login(email, password)
-
-      const produto = await criarProduto(authorization)
-      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
-
-      const { _id: _idProduto } = produto
-
-      const carrinho = await criarCarrinho(_idProduto, authorization)
+      const carrinho = await criarCarrinho(idProduto, authorization)
       expect(carrinho).toHaveProperty('message', 'Cadastro realizado com sucesso')
 
       const concluirCompra = await testServer
@@ -81,14 +66,6 @@ describe('Cancelar compra na rota DELETE', () => {
     })
 
     it('Concluir Compra para cliente sem carrinho', async () => {
-      const { email, password } = await getAdminUserById(userId)
-      const authorization = await login(email, password)
-
-      const produto = await criarProduto(authorization)
-      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
-
-      const { _id: _idProduto } = produto
-
       const concluirCompra = await testServer
         .delete(`${rotaCarrinhos}/concluir-compra`)
         .set('Content-type', 'application/json')

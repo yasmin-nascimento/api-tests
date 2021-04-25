@@ -4,10 +4,21 @@ const { rotaCarrinhos } = require('../utils/rotas')
 const { criarProduto } = require('../utils/produto')
 const { criarCarrinho } = require('../utils/carrinho')
 
+let userId
+let authorization
+let idProduto
+
 describe('Listar carrinhos rota GET', () => {
   beforeEach(async () => {
     const responseUser = await postUser()
     userId = responseUser._id
+
+    const { email, password } = await getAdminUserById(userId)
+    authorization = await login(email, password)
+
+    const produto = await criarProduto(authorization)
+    expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
+    idProduto = produto._id
   })
 
   describe('Listar carrinhos', () => {
@@ -19,15 +30,7 @@ describe('Listar carrinhos rota GET', () => {
 
   describe('Listar carrinho por ID', () => {
     it('Listar carrinho por ID Válido', async () => {
-      const { email, password } = await getAdminUserById(userId)
-      const authorization = await login(email, password)
-
-      const produto = await criarProduto(authorization)
-      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
-
-      const { _id: _idProduto } = produto
-
-      const carrinho = await criarCarrinho(_idProduto, authorization)
+      const carrinho = await criarCarrinho(idProduto, authorization)
       expect(carrinho).toHaveProperty('message', 'Cadastro realizado com sucesso')
 
       const { _id: _idCarrinho } = carrinho

@@ -5,29 +5,24 @@ const { criarProduto } = require('../utils/produto')
 const { criarCarrinho } = require('../utils/carrinho')
 
 let userId
-//let authAdmin
+let authorization
+let idProduto
+
 describe('Cadastrar Carrinho na rota POST', () => {
   beforeEach(async () => {
     const responseUser = await postUser()
     userId = responseUser._id
 
-    // const { email, password } = await getAdminUserById(userId)
-    // const { authorization } = await login(email, password)
-    // authAdmin = authorization
+    const { email, password } = await getAdminUserById(userId)
+    authorization = await login(email, password)
+
+    const produto = await criarProduto(authorization)
+    expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
+    idProduto = produto._id
   })
 
   describe('quando usuário cadastra carrinho válido', () => {
     it('Cadastrar carrinho', async () => {
-      const { email, password } = await getAdminUserById(userId)
-      const authorization = await login(email, password)
-
-      //const authorization = authAdmin
-
-      const produto = await criarProduto(authorization)
-      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
-
-      const { _id: _idProduto } = produto
-
       const carrinho = await testServer
         .post(rotaCarrinhos)
         .set('Content-type', 'application/json')
@@ -35,7 +30,7 @@ describe('Cadastrar Carrinho na rota POST', () => {
         .send({
           produtos: [
             {
-              idProduto: `${_idProduto}`,
+              idProduto: `${idProduto}`,
               quantidade: 1
             }
           ]
@@ -47,18 +42,12 @@ describe('Cadastrar Carrinho na rota POST', () => {
   })
 
   describe('quando usuário cadastra carrinho', () => {
-    it('Cadastrar mais de um carrinho', async () => {
-      const { email, password } = await getAdminUserById(userId)
-      const authorization = await login(email, password)
-
-      const produto = await criarProduto(authorization)
-      expect(produto).toHaveProperty('message', 'Cadastro realizado com sucesso')
-
-      const { _id: _idProduto } = produto
-
-      const carrinho = await criarCarrinho(_idProduto, authorization)
+    beforeEach(async () => {
+      const carrinho = await criarCarrinho(idProduto, authorization)
       expect(carrinho).toHaveProperty('message', 'Cadastro realizado com sucesso')
+    })
 
+    it('Cadastrar mais de um carrinho', async () => {
       const novoCarrinho = await testServer
         .post(rotaCarrinhos)
         .set('Content-type', 'application/json')
@@ -66,7 +55,7 @@ describe('Cadastrar Carrinho na rota POST', () => {
         .send({
           produtos: [
             {
-              idProduto: `${_idProduto}`,
+              idProduto: `${idProduto}`,
               quantidade: 1
             }
           ]
